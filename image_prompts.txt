@@ -1,0 +1,45 @@
+Voici les prompts pour les 11 NOUVEAUX animaux ajoutés (pour atteindre 50 cartes).
+
+INSTRUCTIONS :
+1. Générez les images (Format Portrait).
+2. Nommez les fichiers comme indiqué.
+3. Placez-les dans `public/cards/`.
+
+---
+
+### LÉGENDAIRE (LEGENDARY)
+Fichier : orca.png
+Prompt : Professional wildlife photography of an Orca (Killer Whale) breaching out of the ocean, water splashing, majestic, highly detailed, 8k resolution, vertical portrait aspect ratio 3:4 --ar 3:4
+
+### ÉPIQUES (EPIC)
+Fichier : great_white_shark.png
+Prompt : Professional underwater photography of a Great White Shark, menacing yet majestic, deep blue ocean, sunlight beams, highly detailed, 8k resolution, vertical portrait aspect ratio 3:4 --ar 3:4
+
+Fichier : rhino.png
+Prompt : Professional wildlife photography of a Black Rhinoceros on the savanna, dusty atmosphere, majestic horn, highly detailed, 8k resolution, vertical portrait aspect ratio 3:4 --ar 3:4
+
+Fichier : hippo.png
+Prompt : Professional wildlife photography of a Hippopotamus partially submerged in a river, water surface level, heavy build, highly detailed, 8k resolution, vertical portrait aspect ratio 3:4 --ar 3:4
+
+### RARES (RARE)
+Fichier : cheetah.png
+Prompt : Professional wildlife photography of a Cheetah sprinting or standing tall on a termite mound, savanna background, highly detailed, 8k resolution, vertical portrait aspect ratio 3:4 --ar 3:4
+
+Fichier : kangaroo.png
+Prompt : Professional wildlife photography of a Red Kangaroo standing in the Australian outback, red earth, muscular, highly detailed, 8k resolution, vertical portrait aspect ratio 3:4 --ar 3:4
+
+Fichier : lemur.png
+Prompt : Professional wildlife photography of a Ring-tailed Lemur sitting on a tree branch, madagascar forest, expressive eyes, highly detailed, 8k resolution, vertical portrait aspect ratio 3:4 --ar 3:4
+
+Fichier : fennec.png
+Prompt : Professional wildlife photography of a Fennec Fox in the sand dunes, huge ears, cute face, desert sunlight, highly detailed, 8k resolution, vertical portrait aspect ratio 3:4 --ar 3:4
+
+### COMMUNS (COMMON)
+Fichier : sheep.png
+Prompt : Professional photography of a fluffy Sheep in a green pasture, rolling hills background, cute face, highly detailed, 8k resolution, vertical portrait aspect ratio 3:4 --ar 3:4
+
+Fichier : horse.png
+Prompt : Professional photography of a brown Horse galloping in a field, mane flowing, dynamic, highly detailed, 8k resolution, vertical portrait aspect ratio 3:4 --ar 3:4
+
+Fichier : duck.png
+Prompt : Professional wildlife photography of a Mallard Duck swimming in a pond, iridescent green head, water ripples, highly detailed, 8k resolution, vertical portrait aspect ratio 3:4 --ar 3:4

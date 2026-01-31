@@ -1,0 +1,105 @@
+# MANUEL UTILISATEUR & TECHNIQUE - LIFESYNC v1.0
+# Généré le 30 Janvier 2026
+
+================================================================================
+1. PRÉSENTATION GÉNÉRALE
+================================================================================
+LifeSync est une application de gestion de foyer intelligente ("Smart Home Management") conçue pour synchroniser la vie de famille. Elle ne se contente pas de lister des tâches, elle gamifie le quotidien et utilise une Intelligence Artificielle avancée (Gemini 3.0) pour réduire la charge mentale.
+
+L'application fonctionne selon une architecture 24/7 :
+- **Front-end / Web** : Interface utilisateur pour la gestion (PC/Mobile/Tablette).
+- **Scheduler (Backend)** : Script autonome tournant sur un serveur (VM Freebox) qui gère le temps, les alertes et l'IA en arrière-plan.
+- **Notifications** : Tout passe par Telegram pour une réactivité immédiate.
+
+================================================================================
+2. LES FONCTIONNALITÉS CLÉS
+================================================================================
+
+A. CUISINE & COURSES (L'Assistant Chef)
+---------------------------------------
+- **Planification Hebdomadaire IA** : Génère un menu complet pour la semaine en une fois.
+  - Prend en compte : L'inventaire (priorité absolue anti-gaspillage), la saisonnalité, les goûts de chacun, et l'agenda (repas rapide si événement prévu).
+  - Modes spéciaux : "Express" (15min max), "Simple", ou "Plaisir" (Vendredi/Samedi soir).
+- **Liste de Courses Intelligente** : 
+  - Fusionne les ingrédients des recettes choisies.
+  - Trie automatiquement les articles par rayon (Fruits & Légumes, Frais, Épicerie...) via l'IA.
+  - Comparateur de prix IA : Peut chercher le meilleur prix d'un produit spécifique sur le web.
+- **Gestion de Stock** : Suivi des dates de péremption avec alerte via l'IA lors de la création des menus.
+
+B. GAMIFICATION & TÂCHES (Le Système de Points)
+-----------------------------------------------
+- **Points de Ménage** : Seules les tâches ménagères (corvées) rapportent des points standards.
+  - L'IA estime la valeur d'une tâche (1 à 50 pts) selon sa pénibilité (ex: Ranger = 5pts, Vitres = 50pts).
+- **Classement (Ranking)** : Un tableau de bord affiche les scores du mois pour stimuler la participation.
+- **Rattrapage** : Le membre classé dernier peut recevoir des "Défis Hardcore" (via le Coach) pour gagner des points bonus et recoller au score.
+
+C. SANTÉ & BIEN-ÊTRE (Le Coach Personnel)
+-----------------------------------------
+- **Défis Quotidiens (IA)** : Chaque matin (08:00), l'IA génère un défi personnalisé.
+  - Types : Solo, Coop (faire ensemble), Compétitif (versus), ou Prank (blague).
+  - Difficulté Adaptative : Plus l'utilisateur réussit (streak), plus c'est dur.
+  - **Note importante** : Ces défis ne rapportent PAS de points de ménage, sauf si c'est un défi spécial "Hardcore" pour le dernier du classement.
+- **Rappels Médicaments** : Système critique de notification Telegram.
+  - Notifications précises à l'heure du traitement.
+  - "Catch-up" : Si non validé, rappels de rattrapage et alerte aux autres membres (Caregiver) à 21h00.
+- **Dossiers Médicaux** : Suivi pour humains et animaux (vétérinaire).
+
+D. BUDGET PARTAGÉ
+-----------------
+- **Suivi des Dépenses** : Enregistrement des coûts communs.
+- **Régularisation** : Calcul automatique de "qui doit combien à qui".
+- **Charges Fixes** : Synthèse mensuelle des abonnements et coûts récurrents.
+
+E. ASSISTANT & VIE DU FOYER
+---------------------------
+- **Chat Assistant** : Posez des questions sur le foyer ("Où est le chat ?", "Quel est le code wifi ?") et l'IA répond en utilisant les données de la maison.
+- **Widget "Héros"** : Écran d'accueil avec météo résumée humoristiquement et petite phrase d'ambiance sur la famille.
+- **Blague du Jour** : Générée pour détendre l'atmosphère.
+
+================================================================================
+3. INTELLIGENCE ARTIFICIELLE (GEMINI 3.0)
+================================================================================
+L'application repose sur le modèle **Gemini 3.0 Flash Preview**.
+
+RÈGLES ET INSTRUCTIONS SPÉCIFIQUES DE L'IA :
+
+1. **Rôle "Chef Nutritionniste"** :
+   - **Saisonnalité** : Doit connaitre les légumes de saison par mois (ex: Pas de tomates en hiver).
+   - **Anti-Gaspillage** : SI un ingrédient est dans le stock ("Inventaire"), il DOIT être utilisé en priorité dans les recettes avant d'acheter autre chose.
+   - **Sécurité** : Tolérance ZÉRO sur les allergies et les aliments détestés (bannis même sous forme de traces).
+   - **Quantités** : Calcule toujours le total pour le foyer (ne donne jamais par personne).
+
+2. **Rôle "Coach Bien-être"** :
+   - **Ton** : Motivant, énergique, un peu taquin.
+   - **Contraintes** : Ne doit JAMAIS mentionner l'âge ou le "rôle" de l'utilisateur dans le texte du défi (pas de "Bonjour profil 30 ans").
+   - **Concret** : Doit proposer des actions physiques (faire, bouger) plutôt que passives.
+
+3. **Rôle "Assistant Domestique"** :
+   - **Humour** : Doit être capable d'ironie bienveillante sur la vie domestique.
+   - **Format** : Toutes les réponses de l'IA sont strictement formatées en JSON pour être traitées par l'application.
+
+================================================================================
+4. ARCHITECTURE TECHNIQUE ET SCHEDULER
+================================================================================
+L'automatisation est gérée par `scripts/scheduler.js`.
+
+**Cycle de Vie (Heartbeat toutes les minutes) :**
+1. **06:00** : Génération silencieuse des défis IA pour chaque membre (basé sur leur historique).
+2. **08:00** : Envoi des Notifications de Défis sur Telegram.
+3. **18:00** : Rappel pour valider les défis non faits.
+4. **En continu** :
+   - Vérification des événements Agenda (Rappel X minutes avant).
+   - Vérification des prises de médicaments (Heure exacte).
+   - Vérification des "Mises à jour optimistes" (Heartbeat système).
+
+**Redondance & Sécurité :**
+- Le scheduler envoie un "Heartbeat" (battement de coeur) dans la base de données.
+- S'il plante, l'application peut détecter l'absence de heartbeat.
+- Utilise PM2 pour le redémarrage automatique en cas de crash.
+
+================================================================================
+5. INSTRUCTIONS UTILISATEUR
+================================================================================
+- **Modèle IA** : Gemini 3.0 (Ne jamais modifier, quota 250k tokens/min).
+- **Navigation** : Les tests de navigation sont manuels (ne pas demander à l'IA de simuler).
+- **Langue** : L'interface et l'IA communiquent exclusivement en Français.

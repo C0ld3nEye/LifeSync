@@ -1,0 +1,17 @@
+AgendaTodayWidget.tsx
+AgendaWidget.tsx
+AIChatWidget.tsx
+BudgetBalanceWidget.tsx
+BudgetNextWidget.tsx
+BudgetSavingsWidget.tsx
+BudgetWidget.tsx
+ChoresCircleWidget.tsx
+ChoreWidget.tsx
+EnergyWidget.tsx
+HeroWidget.tsx
+LeaderboardWidget.tsx
+MealsNextWidget.tsx
+MealWidget.tsx
+MottoWidget.tsx
+QuickActionsWidget.tsx
+ShoppingWidget.tsx
