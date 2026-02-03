@@ -462,6 +462,8 @@ function HealthContent() {
                                                 {challenge.category === 'mental' && <Moon size={24} />}
                                                 {challenge.category === 'nutrition' && <Coffee size={24} />}
                                                 {challenge.category === 'social' && <Heart size={24} />}
+                                                {challenge.category === 'household' && <Sparkles size={24} />}
+                                                {challenge.category === 'fun' && <Laugh size={24} />}
                                             </div>
                                         )}
                                     </div>

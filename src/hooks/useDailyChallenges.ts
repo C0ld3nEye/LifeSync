@@ -13,7 +13,7 @@ export interface DailyChallenge {
     title: string;
     description: string;
     target: string;
-    category: 'hydration' | 'activity' | 'mental' | 'nutrition' | 'social';
+    category: 'hydration' | 'activity' | 'mental' | 'nutrition' | 'social' | 'household' | 'fun';
     difficulty: 'easy' | 'medium' | 'hard' | 'expert';
     type: 'solo' | 'coop' | 'competitive' | 'prank';
     pointsReward?: number;
@@ -114,7 +114,10 @@ export function useDailyChallenges() {
                 limit(10)
             );
             const recentSnap = await getDocs(recentChallengesQuery);
-            const recentTitles = recentSnap?.docs?.map((d: any) => d.data().title) || [];
+            const recentHistory = recentSnap?.docs?.map((d: any) => {
+                const data = d.data();
+                return `[${data.difficulty || 'moyen'}] [${data.pointsReward || 0}pts] [${data.category || 'diverse'}] ${data.title}`;
+            }) || [];
 
             // Get target member stats
             const statsRef = doc(db, "households", household.id, "memberMetadata", targetUid, "challengeStats", "main");
@@ -147,7 +150,7 @@ export function useDailyChallenges() {
                 // The first one (index 0) has the LOWEST score.
                 // ADDED RULE: Only activate Catch-up mode sometimes (e.g. 15% chance) to avoid spamming Hardcore challenges every day.
                 if (sorted[0].id === targetUid) {
-                    if (Math.random() < 0.15) { // 15% chance
+                    if (Math.random() < 0.10) { // 5% chance (Rare/Exceptional)
                         isLastInRanking = true;
                     }
                 }
@@ -156,17 +159,13 @@ export function useDailyChallenges() {
             // 1. CHECK FOR SHARED COLLECTIVE CHALLENGE (Tue/Sat)
             let aiChallenge = null;
             if (isCollectiveDay) {
-                // Try to find ANY challenge generated today for this household
-                const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-                const queryShared = query(
-                    collection(db, "households", household.id, "dailyChallenges"),
-                    where("generatedAt", ">=", todayStart.toISOString()),
-                    limit(1)
-                );
-                const sharedSnap = await getDocs(queryShared);
-                if (!sharedSnap.empty) {
-                    const existing = sharedSnap.docs[0].data();
-                    // Copy it
+                const sharedId = `${today}_SHARED`;
+                const sharedRef = doc(db, "households", household.id, "dailyChallenges", sharedId);
+                const sharedSnap = await getDoc(sharedRef);
+
+                if (sharedSnap.exists()) {
+                    // Found the Master Challenge
+                    const existing = sharedSnap.data();
                     aiChallenge = {
                         title: existing.title,
                         description: existing.description,
@@ -174,9 +173,26 @@ export function useDailyChallenges() {
                         category: existing.category,
                         difficulty: existing.difficulty,
                         type: existing.type,
-                        pointsReward: 0, // Force 0
+                        pointsReward: 0,
                         isSpecial: false
                     };
+                } else {
+                    // I am the first one! Generate and Save Master Key
+                    const generated = await generateDailyChallenge({
+                        targetMember: { uid: targetUid, role: "Membre", successes: targetStats.currentStreak, age: userAge, isLastInRanking },
+                        familyContext,
+                        recentChallenges: recentHistory,
+                        isCollective: true
+                    });
+
+                    // Save as SHARED first
+                    await setDoc(sharedRef, {
+                        ...generated,
+                        uid: "SHARED",
+                        generatedAt: new Date().toISOString()
+                    });
+
+                    aiChallenge = generated;
                 }
             }
 
@@ -185,7 +201,7 @@ export function useDailyChallenges() {
                 aiChallenge = await generateDailyChallenge({
                     targetMember: { uid: targetUid, role: "Membre", successes: targetStats.currentStreak, age: userAge, isLastInRanking },
                     familyContext,
-                    recentChallenges: recentTitles,
+                    recentChallenges: recentHistory,
                     isCollective: isCollectiveDay
                 });
             }
