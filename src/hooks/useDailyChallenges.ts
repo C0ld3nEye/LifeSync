@@ -157,7 +157,7 @@ export function useDailyChallenges() {
             }
 
             // 1. CHECK FOR SHARED COLLECTIVE CHALLENGE (Tue/Sat)
-            let aiChallenge = null;
+            let aiChallenge: any = null;
             if (isCollectiveDay) {
                 const sharedId = `${today}_SHARED`;
                 const sharedRef = doc(db, "households", household.id, "dailyChallenges", sharedId);

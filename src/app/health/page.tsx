@@ -344,7 +344,7 @@ function HealthContent() {
                                     </div>
                                     <div className="space-y-4">
                                         {history.filter(h => h.profileId === selectedProfile.id).map(h => {
-                                            let counterDay = null;
+                                            let counterDay: number | null = null;
                                             if (h.isCounter && h.counterStartDate) {
                                                 const start = startOfDay(parseISO(h.counterStartDate));
                                                 const current = startOfDay(new Date());

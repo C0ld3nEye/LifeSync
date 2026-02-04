@@ -332,7 +332,7 @@ export async function generateWeekPlan(ctx: WeekContext, onProgress?: (partial: 
             if (slot?.isIgnored) return "SAUTÉ";
             if (slot?.mode === 'leftover') return "RESTES DÉJÀ PRÉVUS (NE RIEN GÉNÉRER)";
             if (slot?.recipe) return `DÉJÀ FAIT: ${slot.recipe.recipeName}`;
-            const reqs = [];
+            const reqs: string[] = [];
             if (slot?.isExpress) reqs.push("EXPRESS");
             if (slot?.isBasic) reqs.push("BASIQUE");
             if (slot?.cookForLeftover) reqs.push("RESTES (DOUBLER QUANTITÉS POUR DEMAIN MIDI)");
