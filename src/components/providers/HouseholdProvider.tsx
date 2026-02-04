@@ -13,7 +13,7 @@ export interface HouseholdData {
     name: string;
     members: string[]; // User IDs
     memberProfiles?: { uid: string; displayName: string; photoURL?: string; activeBadge?: string; age?: number; birthDate?: string }[];
-    memberPreferences?: Record<string, { dislikes: string[]; allergies?: string[]; activeBadge?: string; widgets?: string[]; telegramChatId?: string }>;
+    memberPreferences?: Record<string, { dislikes: string[]; allergies?: string[]; activeBadge?: string; widgets?: string[]; telegramChatId?: string; homeAddress?: { label: string; lat: number; lon: number } }>;
     preferences?: {
         forbiddenIngredients: string[];
         kitchenTools?: string[];

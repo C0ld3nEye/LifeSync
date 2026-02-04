@@ -80,37 +80,35 @@ async function checkReminders() {
 
             if (diffMinutes < 0) return; // Past event
 
-            // Check reminders
+            // 1. STANDARD REMINDERS
             if (event.reminders && Array.isArray(event.reminders)) {
                 for (const reminderMin of event.reminders) {
                     if (diffMinutes === reminderMin) {
-                        // IT'S TIME!
                         console.log(`🔔 Notification pour "${event.title}" (dans ${reminderMin} min)`);
+                        await notifyEvent(householdId, event, `dans ${reminderMin} minutes`, false);
+                    }
+                }
+            }
 
-                        // Get Household Recipients
-                        const householdDoc = await db.collection('households').doc(householdId).get();
-                        if (!householdDoc.exists) continue;
+            // 2. TRAVEL DEPARTURE NOTIFICATION
+            if (event.departureTime) {
+                const departDate = new Date(event.departureTime);
+                const diffDepartMs = departDate.getTime() - now.getTime();
+                const diffDepartMin = Math.round(diffDepartMs / 60000);
 
-                        const hData = householdDoc.data();
-                        const prefs = hData.memberPreferences || {};
+                // Notify exactly at departure time (or 1 min before to be safe)
+                if (diffDepartMin === 0 || diffDepartMin === 5) { // Notify at T-5min and T-0
+                    // Prevent double notify with flag? 
+                    // Since script runs every minute, T-0 happens once. T-5 happens once.
+                    // We accept 2 notifications for travel: "Prepare to leave" and "Leave now".
 
-                        // Determine who to notify
-                        let targets = [];
-                        if (event.assignees.includes('family')) {
-                            targets = Object.keys(prefs); // Everyone
-                        } else {
-                            targets = event.assignees;
-                        }
-
-                        // Send
-                        targets.forEach(uid => {
-                            const userPref = prefs[uid];
-                            if (userPref && userPref.telegramChatId) {
-                                const timeMsg = reminderMin === 0 ? "C'est maintenant !" : `dans ${reminderMin} minutes.`;
-                                const addressMsg = event.address ? `\n📍 [Voir le plan](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.address)})` : "";
-                                sendTelegram(userPref.telegramChatId, `📅 *Agenda*\n*${event.title}*\n${timeMsg}${addressMsg}`);
-                            }
-                        });
+                    const travelTime = event.travelTime || 0;
+                    if (diffDepartMin === 0) {
+                        const msg = `🚗 *DÉPART MAINTENANT*\nTrajet estimé : ${travelTime} min.\nC'est l'heure de partir pour être à l'heure !`;
+                        await notifyEvent(householdId, event, msg, true);
+                    } else if (diffDepartMin === 5) {
+                        const msg = `👟 *Préparez-vous*\nDépart conseillé dans 5 minutes (Trajet: ${travelTime} min).`;
+                        await notifyEvent(householdId, event, msg, true);
                     }
                 }
             }
@@ -120,6 +118,43 @@ async function checkReminders() {
         console.error("Erreur checkReminders:", e);
     }
 }
+
+async function notifyEvent(householdId, event, timeMsgOrCustomBody, isCustomBody) {
+    const householdDoc = await db.collection('households').doc(householdId).get();
+    if (!householdDoc.exists) return;
+
+    const hData = householdDoc.data();
+    const prefs = hData.memberPreferences || {};
+
+    let targets = [];
+    if (event.assignees.includes('family')) {
+        targets = Object.keys(prefs);
+    } else {
+        targets = event.assignees;
+    }
+
+    targets.forEach(uid => {
+        const userPref = prefs[uid];
+        // Check if travel notifications are disabled for this user? 
+        // We added 'travelNotificationsEnabled' in user prefs but didn't UI it. Assume enabled for now or check prop.
+        // if (isCustomBody && userPref.travelNotificationsEnabled === false) return; 
+
+        if (userPref && userPref.telegramChatId) {
+            const addressMsg = (event.location?.label || event.address) ? `\n📍 [Voir le plan](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location?.label || event.address)})` : "";
+
+            let finalMsg = "";
+            if (isCustomBody) {
+                finalMsg = `📅 *Agenda - ${event.title}*\n${timeMsgOrCustomBody}${addressMsg}`;
+            } else {
+                finalMsg = `📅 *Agenda*\n*${event.title}*\n${timeMsgOrCustomBody}.${addressMsg}`;
+            }
+
+            sendTelegram(userPref.telegramChatId, finalMsg);
+        }
+    });
+}
+
+
 
 // --- DAILY CHALLENGES AUTOMATION ---
 async function generateGeminiChallenge(targetMember, familyContext, recentChallenges, isCollective) {

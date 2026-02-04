@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useHousehold } from "@/hooks/useHousehold";
-import { X, Copy, Check, Settings, Trash2, Edit2, LogOut, Link2Off, Calendar, Send } from "lucide-react";
+import { X, Copy, Check, Settings, Trash2, Edit2, LogOut, Link2Off, Calendar, Send, Home } from "lucide-react";
+import AddressAutocomplete from "@/components/ui/AddressAutocomplete";
 import { differenceInYears, parseISO } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -25,11 +26,23 @@ export default function HouseholdSettings({ isOpen, onClose }: { isOpen: boolean
     const telegramChatId = household?.memberPreferences?.[user?.uid || '']?.telegramChatId;
     const [telegramChatInput, setTelegramChatInput] = useState("");
 
+    // Home Address State
+    const myPrefs = household?.memberPreferences?.[user?.uid || ''];
+    const [homeAddress, setHomeAddress] = useState<{ label: string; lat: number; lon: number } | null>(null);
+
     useEffect(() => {
-        if (isOpen && telegramChatId) {
-            setTelegramChatInput(telegramChatId);
+        if (isOpen && myPrefs) {
+            setTelegramChatInput(myPrefs.telegramChatId || "");
+            setHomeAddress(myPrefs.homeAddress || null);
         }
-    }, [isOpen, telegramChatId]);
+    }, [isOpen, myPrefs]);
+
+    const saveHomeAddress = async (newAddress: { label: string; lat: number; lon: number } | null) => {
+        if (!user) return;
+        setHomeAddress(newAddress);
+        // Auto-save on selection
+        await updateMemberPreferences(user.uid, { homeAddress: newAddress });
+    };
 
     const saveTelegramId = async () => {
         if (!user || saving) return;
@@ -252,6 +265,35 @@ export default function HouseholdSettings({ isOpen, onClose }: { isOpen: boolean
                                                 </div>
                                             );
                                         })}
+                                    </div>
+                                </div>
+
+                                {/* Home Address */}
+                                <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">Mon Domicile (Départ)</label>
+                                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/50">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 flex items-center justify-center">
+                                                <Home size={20} />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-slate-800 dark:text-white text-sm">Adresse de départ</p>
+                                                <p className="text-[10px] font-medium text-slate-400">Pour calculer vos temps de trajet</p>
+                                            </div>
+                                        </div>
+
+                                        <AddressAutocomplete
+                                            value={homeAddress || ""}
+                                            onChange={saveHomeAddress as any}
+                                            placeholder="Saisissez votre adresse..."
+                                            className="w-full text-sm"
+                                        />
+
+                                        {homeAddress && (
+                                            <p className="text-[10px] text-emerald-500 font-bold mt-2 flex items-center gap-1">
+                                                <Check size={10} /> Enregistré
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 

@@ -16,7 +16,20 @@ export interface AgendaEvent {
     assignees: string[]; // ['family'] or specific user UIDs
     reminders?: number[]; // List of minutes before the event to notify
     ownerName?: string; // Optional for display
-    address?: string; // Optional location address
+    address?: string; // Legacy string address
+    location?: {
+        label: string;
+        lat: number;
+        lon: number;
+    };
+    travelTime?: number; // Minutes
+    departureTime?: string; // ISO String calculated
+    alertMargin?: number; // Minutes before departure to alert
+    originLocation?: {
+        label: string;
+        lat: number;
+        lon: number;
+    };
 
     metadata?: Record<string, any>; // Optional metadata for internal links
 }
