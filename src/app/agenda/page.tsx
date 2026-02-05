@@ -526,7 +526,6 @@ export default function AgendaPage() {
     const selectedEvents = getDayItems(selectedDate).sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime());
 
     return (
-    return (
         <div className="bg-slate-50 dark:bg-slate-950 h-[100dvh] flex flex-col overflow-hidden transition-colors duration-300">
             {!household && !loading && (
                 <div className="bg-red-500 text-white p-2 text-center text-sm font-bold">
@@ -887,7 +886,6 @@ export default function AgendaPage() {
             </div>
 
             </div>
-            </div >
 
     {
         showAddModal && (
@@ -1131,22 +1129,22 @@ export default function AgendaPage() {
                 </motion.div>
             </div>
         )
-}
-{
-    showTravelModal && pendingEvent && pendingEvent.location && (
-        <TravelEstimationModal
-            isOpen={showTravelModal}
-            onClose={handleCancelTravel}
-            onConfirm={handleConfirmTravel}
-            destination={pendingEvent.location}
-            eventStart={(() => {
-                const tz = household?.timezone || 'Europe/Paris';
-                const time = pendingEvent.allDay ? '09:00' : pendingEvent.start;
-                return fromZonedTime(`${pendingEvent.date} ${time}:00`, tz).toISOString();
-            })()}
-        />
-    )
-}
+    }
+    {
+        showTravelModal && pendingEvent && pendingEvent.location && (
+            <TravelEstimationModal
+                isOpen={showTravelModal}
+                onClose={handleCancelTravel}
+                onConfirm={handleConfirmTravel}
+                destination={pendingEvent.location}
+                eventStart={(() => {
+                    const tz = household?.timezone || 'Europe/Paris';
+                    const time = pendingEvent.allDay ? '09:00' : pendingEvent.start;
+                    return fromZonedTime(`${pendingEvent.date} ${time}:00`, tz).toISOString();
+                })()}
+            />
+        )
+    }
         </div >
     );
 }
