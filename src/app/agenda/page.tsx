@@ -526,7 +526,8 @@ export default function AgendaPage() {
     const selectedEvents = getDayItems(selectedDate).sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime());
 
     return (
-        <div className="bg-slate-50 dark:bg-slate-950 min-h-screen pb-6 transition-colors duration-300">
+    return (
+        <div className="bg-slate-50 dark:bg-slate-950 h-[100dvh] flex flex-col overflow-hidden transition-colors duration-300">
             {!household && !loading && (
                 <div className="bg-red-500 text-white p-2 text-center text-sm font-bold">
                     ⚠️ Aucun foyer d&eacute;tect&eacute;. Retournez &agrave; l&apos;accueil pour configurer.
@@ -621,7 +622,10 @@ export default function AgendaPage() {
                 </div>
             </div>
 
-            {viewMode === 'month' && (
+            </div>
+
+            <div className="flex-1 overflow-y-auto pb-24">
+                {viewMode === 'month' && (
                 <div className="p-2 grid grid-cols-7 gap-1 text-center mb-4">
                     {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => <span key={`${d}-${i}`} className="text-xs font-bold text-slate-300 dark:text-slate-600 mb-2">{d}</span>)}
                     {days.map(d => {
@@ -882,262 +886,267 @@ export default function AgendaPage() {
                 </AnimatePresence>
             </div>
 
-            {
-                showAddModal && (
-                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2rem] p-8 shadow-2xl border dark:border-slate-800 relative max-h-[90vh] overflow-y-auto">
-                            <button
-                                onClick={() => setShowAddModal(false)}
-                                className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition z-10"
-                            >
-                                <X size={20} />
-                            </button>
-                            <h3 className="font-bold text-xl mb-4 text-slate-800 dark:text-white pr-10">{editingEventId ? "Modifier l'événement" : "Nouvel événement"}</h3>
-                            <form onSubmit={handleAdd} className="space-y-4 pb-8">
+            </div>
+            </div >
+
+    {
+        showAddModal && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2rem] p-8 shadow-2xl border dark:border-slate-800 relative max-h-[90vh] overflow-y-auto">
+                    <button
+                        onClick={() => setShowAddModal(false)}
+                        className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition z-10"
+                    >
+                        <X size={20} />
+                    </button>
+                    <h3 className="font-bold text-xl mb-4 text-slate-800 dark:text-white pr-10">{editingEventId ? "Modifier l'événement" : "Nouvel événement"}</h3>
+                    <form onSubmit={handleAdd} className="space-y-4 pb-8">
+                        <input
+                            autoFocus
+                            required
+                            placeholder="Titre (ex: Rdv Dentiste)"
+                            className="w-full p-3 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl border-none font-bold text-lg outline-emerald-500 placeholder:text-slate-400"
+                            value={newEvent.title}
+                            onChange={e => setNewEvent({ ...newEvent, title: e.target.value })}
+                        />
+
+                        <AddressAutocomplete
+                            value={newEvent.location || newEvent.address || ""}
+                            onChange={(val: AddressResult) => setNewEvent({ ...newEvent, location: val, address: val.label })}
+                            placeholder="Lieu / Adresse (ex: Cinema, Gare...)"
+                        />
+
+
+
+                        {/* [NEW] DATE PICKER */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Date de début</label>
                                 <input
-                                    autoFocus
+                                    type="date"
                                     required
-                                    placeholder="Titre (ex: Rdv Dentiste)"
-                                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl border-none font-bold text-lg outline-emerald-500 placeholder:text-slate-400"
-                                    value={newEvent.title}
-                                    onChange={e => setNewEvent({ ...newEvent, title: e.target.value })}
+                                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl font-bold outline-emerald-500"
+                                    value={newEvent.date}
+                                    onChange={e => {
+                                        setNewEvent({ ...newEvent, date: e.target.value });
+                                        // Auto-update end date if it's before the new start date
+                                        if (e.target.value > newEvent.endDate) {
+                                            setNewEvent(prev => ({ ...prev, date: e.target.value, endDate: e.target.value }));
+                                        }
+                                    }}
                                 />
-
-                                <AddressAutocomplete
-                                    value={newEvent.location || newEvent.address || ""}
-                                    onChange={(val: AddressResult) => setNewEvent({ ...newEvent, location: val, address: val.label })}
-                                    placeholder="Lieu / Adresse (ex: Cinema, Gare...)"
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Date de fin</label>
+                                <input
+                                    type="date"
+                                    required
+                                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl font-bold outline-emerald-500"
+                                    value={newEvent.endDate}
+                                    min={newEvent.date}
+                                    onChange={e => setNewEvent({ ...newEvent, endDate: e.target.value })}
                                 />
+                            </div>
+                        </div>
 
+                        <label className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-3 rounded-xl cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={newEvent.allDay}
+                                onChange={e => setNewEvent({ ...newEvent, allDay: e.target.checked })}
+                                className="w-5 h-5 accent-emerald-500 rounded"
+                            />
+                            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Toute la journée</span>
+                        </label>
 
+                        {!newEvent.allDay && (
+                            <div className="flex gap-2">
+                                <div className="flex-1">
+                                    <label className="text-xs font-bold text-slate-400 uppercase">Début</label>
+                                    <input type="time" className="w-full p-2 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-lg font-bold" value={newEvent.start} onChange={e => setNewEvent({ ...newEvent, start: e.target.value })} />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="text-xs font-bold text-slate-400 uppercase">Fin</label>
+                                    <input type="time" className="w-full p-2 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-lg font-bold" value={newEvent.end} onChange={e => setNewEvent({ ...newEvent, end: e.target.value })} />
+                                </div>
+                            </div>
+                        )}
 
-                                {/* [NEW] DATE PICKER */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Date de début</label>
-                                        <input
-                                            type="date"
-                                            required
-                                            className="w-full p-3 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl font-bold outline-emerald-500"
-                                            value={newEvent.date}
-                                            onChange={e => {
-                                                setNewEvent({ ...newEvent, date: e.target.value });
-                                                // Auto-update end date if it's before the new start date
-                                                if (e.target.value > newEvent.endDate) {
-                                                    setNewEvent(prev => ({ ...prev, date: e.target.value, endDate: e.target.value }));
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Date de fin</label>
-                                        <input
-                                            type="date"
-                                            required
-                                            className="w-full p-3 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl font-bold outline-emerald-500"
-                                            value={newEvent.endDate}
-                                            min={newEvent.date}
-                                            onChange={e => setNewEvent({ ...newEvent, endDate: e.target.value })}
-                                        />
+                        {/* [NEW] ADVANCED TOGGLE */}
+                        <button
+                            type="button"
+                            onClick={() => setShowAdvanced(!showAdvanced)}
+                            className="w-full py-2 flex items-center justify-center gap-2 text-sm font-bold text-slate-500 hover:text-emerald-500 transition"
+                        >
+                            {showAdvanced ? "Moins d'options" : "Plus d'options (Type, Rappels, Participants)"}
+                            <ChevronDown size={16} className={cn("transition-transform", showAdvanced && "rotate-180")} />
+                        </button>
+
+                        {showAdvanced && (
+                            <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800 animate-in fade-in slide-in-from-top-2">
+                                {/* TYPE SELECTION */}
+                                <div>
+                                    <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Type</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {Object.entries(EVENT_TYPES).map(([key, label]) => {
+                                            if (key === 'other') return null;
+                                            return (
+                                                <button
+                                                    key={key}
+                                                    type="button"
+                                                    onClick={() => setNewEvent({
+                                                        ...newEvent,
+                                                        type: key,
+                                                        recurrence: key === 'birthday' ? 'annual' : 'none',
+                                                        allDay: key === 'birthday' ? true : newEvent.allDay
+                                                    })}
+                                                    className={cn("px-3 py-1 rounded-full text-xs font-bold capitalize border transition", newEvent.type === key ? "bg-slate-800 text-white border-slate-800" : "bg-white dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700")}
+                                                >
+                                                    {label}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
-                                <label className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-3 rounded-xl cursor-pointer">
+                                {/* RECURRENCE (Only if Birthday or specific) - Usually handled by Type but we keep Logic */}
+                                {newEvent.type === 'birthday' && (
+                                    <div className="bg-pink-50 dark:bg-pink-900/20 p-3 rounded-xl border border-pink-100 dark:border-pink-900/50">
+                                        <label className="flex items-center gap-2 text-pink-700 dark:text-pink-300 font-bold text-sm">
+                                            <Cake size={16} /> Répéter chaque année
+                                        </label>
+                                    </div>
+                                )}
+
+                                {/* REMINDERS */}
+                                <div>
+                                    <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Rappels</label>
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                        {[0, 10, 15, 60, 1440].map(value => {
+                                            const isActive = newEvent.reminders?.includes(value);
+                                            let label = "";
+                                            if (value === 0) label = "Début";
+                                            else if (value === 10) label = "10m";
+                                            else if (value === 15) label = "15m";
+                                            else if (value === 60) label = "1h";
+                                            else if (value === 1440) label = "1j";
+
+                                            return (
+                                                <button
+                                                    key={value}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const current = newEvent.reminders || [];
+                                                        const next = isActive ? current.filter(r => r !== value) : [...current, value];
+                                                        setNewEvent({ ...newEvent, reminders: next });
+                                                    }}
+                                                    className={cn(
+                                                        "px-3 py-1 rounded-full text-xs font-bold border transition",
+                                                        isActive ? "bg-amber-500 text-white border-amber-500" : "bg-white dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700"
+                                                    )}
+                                                >
+                                                    {label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {/* Custom Input Simplified if needed or kept same */}
                                     <input
-                                        type="checkbox"
-                                        checked={newEvent.allDay}
-                                        onChange={e => setNewEvent({ ...newEvent, allDay: e.target.checked })}
-                                        className="w-5 h-5 accent-emerald-500 rounded"
+                                        type="number"
+                                        placeholder="Min perso..."
+                                        className="w-full text-xs p-2 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-lg font-bold"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                const val = parseInt((e.target as HTMLInputElement).value);
+                                                if (!isNaN(val) && val > 0 && !(newEvent.reminders || []).includes(val)) {
+                                                    setNewEvent({ ...newEvent, reminders: [...(newEvent.reminders || []), val] });
+                                                    (e.target as HTMLInputElement).value = "";
+                                                }
+                                            }
+                                        }}
                                     />
-                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Toute la journée</span>
-                                </label>
-
-                                {!newEvent.allDay && (
-                                    <div className="flex gap-2">
-                                        <div className="flex-1">
-                                            <label className="text-xs font-bold text-slate-400 uppercase">Début</label>
-                                            <input type="time" className="w-full p-2 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-lg font-bold" value={newEvent.start} onChange={e => setNewEvent({ ...newEvent, start: e.target.value })} />
+                                    {newEvent.reminders && newEvent.reminders.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-2">
+                                            {newEvent.reminders.filter(r => ![0, 10, 15, 60, 1440].includes(r)).map(r => (
+                                                <span key={r} className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                                                    {r}m <button type="button" onClick={() => setNewEvent({ ...newEvent, reminders: (newEvent.reminders || []).filter(x => x !== r) })}>×</button>
+                                                </span>
+                                            ))}
                                         </div>
-                                        <div className="flex-1">
-                                            <label className="text-xs font-bold text-slate-400 uppercase">Fin</label>
-                                            <input type="time" className="w-full p-2 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-lg font-bold" value={newEvent.end} onChange={e => setNewEvent({ ...newEvent, end: e.target.value })} />
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* [NEW] ADVANCED TOGGLE */}
-                                <button
-                                    type="button"
-                                    onClick={() => setShowAdvanced(!showAdvanced)}
-                                    className="w-full py-2 flex items-center justify-center gap-2 text-sm font-bold text-slate-500 hover:text-emerald-500 transition"
-                                >
-                                    {showAdvanced ? "Moins d'options" : "Plus d'options (Type, Rappels, Participants)"}
-                                    <ChevronDown size={16} className={cn("transition-transform", showAdvanced && "rotate-180")} />
-                                </button>
-
-                                {showAdvanced && (
-                                    <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800 animate-in fade-in slide-in-from-top-2">
-                                        {/* TYPE SELECTION */}
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Type</label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {Object.entries(EVENT_TYPES).map(([key, label]) => {
-                                                    if (key === 'other') return null;
-                                                    return (
-                                                        <button
-                                                            key={key}
-                                                            type="button"
-                                                            onClick={() => setNewEvent({
-                                                                ...newEvent,
-                                                                type: key,
-                                                                recurrence: key === 'birthday' ? 'annual' : 'none',
-                                                                allDay: key === 'birthday' ? true : newEvent.allDay
-                                                            })}
-                                                            className={cn("px-3 py-1 rounded-full text-xs font-bold capitalize border transition", newEvent.type === key ? "bg-slate-800 text-white border-slate-800" : "bg-white dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700")}
-                                                        >
-                                                            {label}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-
-                                        {/* RECURRENCE (Only if Birthday or specific) - Usually handled by Type but we keep Logic */}
-                                        {newEvent.type === 'birthday' && (
-                                            <div className="bg-pink-50 dark:bg-pink-900/20 p-3 rounded-xl border border-pink-100 dark:border-pink-900/50">
-                                                <label className="flex items-center gap-2 text-pink-700 dark:text-pink-300 font-bold text-sm">
-                                                    <Cake size={16} /> Répéter chaque année
-                                                </label>
-                                            </div>
-                                        )}
-
-                                        {/* REMINDERS */}
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Rappels</label>
-                                            <div className="flex flex-wrap gap-2 mb-2">
-                                                {[0, 10, 15, 60, 1440].map(value => {
-                                                    const isActive = newEvent.reminders?.includes(value);
-                                                    let label = "";
-                                                    if (value === 0) label = "Début";
-                                                    else if (value === 10) label = "10m";
-                                                    else if (value === 15) label = "15m";
-                                                    else if (value === 60) label = "1h";
-                                                    else if (value === 1440) label = "1j";
-
-                                                    return (
-                                                        <button
-                                                            key={value}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                const current = newEvent.reminders || [];
-                                                                const next = isActive ? current.filter(r => r !== value) : [...current, value];
-                                                                setNewEvent({ ...newEvent, reminders: next });
-                                                            }}
-                                                            className={cn(
-                                                                "px-3 py-1 rounded-full text-xs font-bold border transition",
-                                                                isActive ? "bg-amber-500 text-white border-amber-500" : "bg-white dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700"
-                                                            )}
-                                                        >
-                                                            {label}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                            {/* Custom Input Simplified if needed or kept same */}
-                                            <input
-                                                type="number"
-                                                placeholder="Min perso..."
-                                                className="w-full text-xs p-2 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-lg font-bold"
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        const val = parseInt((e.target as HTMLInputElement).value);
-                                                        if (!isNaN(val) && val > 0 && !(newEvent.reminders || []).includes(val)) {
-                                                            setNewEvent({ ...newEvent, reminders: [...(newEvent.reminders || []), val] });
-                                                            (e.target as HTMLInputElement).value = "";
-                                                        }
-                                                    }
-                                                }}
-                                            />
-                                            {newEvent.reminders && newEvent.reminders.length > 0 && (
-                                                <div className="flex flex-wrap gap-1 mt-2">
-                                                    {newEvent.reminders.filter(r => ![0, 10, 15, 60, 1440].includes(r)).map(r => (
-                                                        <span key={r} className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                                                            {r}m <button type="button" onClick={() => setNewEvent({ ...newEvent, reminders: (newEvent.reminders || []).filter(x => x !== r) })}>×</button>
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* ASSIGNEES SIMPLIFIED */}
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Participants</label>
-                                            <div className="flex flex-wrap gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setNewEvent({ ...newEvent, assignees: ['family'] })}
-                                                    className={cn("px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-2",
-                                                        newEvent.assignees.includes('family') ? "bg-emerald-100 border-emerald-500 text-emerald-700" : "bg-white dark:bg-slate-800 text-slate-500"
-                                                    )}
-                                                >
-                                                    <Users size={14} /> Foyer
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setNewEvent({ ...newEvent, assignees: [user?.uid || ''] })}
-                                                    className={cn("px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-2",
-                                                        !newEvent.assignees.includes('family') && newEvent.assignees.length === 1 && newEvent.assignees.includes(user?.uid || '')
-                                                            ? "bg-purple-100 border-purple-500 text-purple-700" : "bg-white dark:bg-slate-800 text-slate-500"
-                                                    )}
-                                                >
-                                                    <EyeOff size={14} /> Privé
-                                                </button>
-                                                {household?.memberProfiles?.filter(m => m.uid !== user?.uid).map((m) => (
-                                                    <button
-                                                        key={m.uid}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const current = newEvent.assignees.filter(a => a !== 'family');
-                                                            const createNew = current.includes(m.uid) ? current.filter(id => id !== m.uid) : [...current, m.uid];
-                                                            setNewEvent({ ...newEvent, assignees: createNew.length > 0 ? createNew : ['family'] });
-                                                        }}
-                                                        className={cn("px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-2",
-                                                            !newEvent.assignees.includes('family') && newEvent.assignees.includes(m.uid)
-                                                                ? "bg-blue-100 border-blue-500 text-blue-700" : "bg-white dark:bg-slate-800 text-slate-500"
-                                                        )}
-                                                    >
-                                                        {m.photoURL ? <img src={m.photoURL} className="w-4 h-4 rounded-full" /> : <span className="w-4 h-4 bg-slate-300 rounded-full flex items-center justify-center text-[8px] text-white">{m.displayName[0]}</span>}
-                                                        {m.displayName}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="flex gap-3 pt-2">
-                                    <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 font-bold text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl">Annuler</button>
-                                    <button type="submit" className="flex-1 py-3 font-bold bg-emerald-600 text-white rounded-xl shadow-lg hover:bg-emerald-700">{editingEventId ? "Modifier" : "Ajouter"}</button>
+                                    )}
                                 </div>
-                            </form>
-                        </motion.div>
-                    </div>
-                )
-            }
-            {showTravelModal && pendingEvent && pendingEvent.location && (
-                <TravelEstimationModal
-                    isOpen={showTravelModal}
-                    onClose={handleCancelTravel}
-                    onConfirm={handleConfirmTravel}
-                    destination={pendingEvent.location}
-                    eventStart={(() => {
-                        const tz = household?.timezone || 'Europe/Paris';
-                        const time = pendingEvent.allDay ? '09:00' : pendingEvent.start;
-                        return fromZonedTime(`${pendingEvent.date} ${time}:00`, tz).toISOString();
-                    })()}
-                />
-            )}
+
+                                {/* ASSIGNEES SIMPLIFIED */}
+                                <div>
+                                    <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Participants</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewEvent({ ...newEvent, assignees: ['family'] })}
+                                            className={cn("px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-2",
+                                                newEvent.assignees.includes('family') ? "bg-emerald-100 border-emerald-500 text-emerald-700" : "bg-white dark:bg-slate-800 text-slate-500"
+                                            )}
+                                        >
+                                            <Users size={14} /> Foyer
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewEvent({ ...newEvent, assignees: [user?.uid || ''] })}
+                                            className={cn("px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-2",
+                                                !newEvent.assignees.includes('family') && newEvent.assignees.length === 1 && newEvent.assignees.includes(user?.uid || '')
+                                                    ? "bg-purple-100 border-purple-500 text-purple-700" : "bg-white dark:bg-slate-800 text-slate-500"
+                                            )}
+                                        >
+                                            <EyeOff size={14} /> Privé
+                                        </button>
+                                        {household?.memberProfiles?.filter(m => m.uid !== user?.uid).map((m) => (
+                                            <button
+                                                key={m.uid}
+                                                type="button"
+                                                onClick={() => {
+                                                    const current = newEvent.assignees.filter(a => a !== 'family');
+                                                    const createNew = current.includes(m.uid) ? current.filter(id => id !== m.uid) : [...current, m.uid];
+                                                    setNewEvent({ ...newEvent, assignees: createNew.length > 0 ? createNew : ['family'] });
+                                                }}
+                                                className={cn("px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-2",
+                                                    !newEvent.assignees.includes('family') && newEvent.assignees.includes(m.uid)
+                                                        ? "bg-blue-100 border-blue-500 text-blue-700" : "bg-white dark:bg-slate-800 text-slate-500"
+                                                )}
+                                            >
+                                                {m.photoURL ? <img src={m.photoURL} className="w-4 h-4 rounded-full" /> : <span className="w-4 h-4 bg-slate-300 rounded-full flex items-center justify-center text-[8px] text-white">{m.displayName[0]}</span>}
+                                                {m.displayName}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex gap-3 pt-2">
+                            <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 font-bold text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl">Annuler</button>
+                            <button type="submit" className="flex-1 py-3 font-bold bg-emerald-600 text-white rounded-xl shadow-lg hover:bg-emerald-700">{editingEventId ? "Modifier" : "Ajouter"}</button>
+                        </div>
+                    </form>
+                </motion.div>
+            </div>
+        )
+}
+{
+    showTravelModal && pendingEvent && pendingEvent.location && (
+        <TravelEstimationModal
+            isOpen={showTravelModal}
+            onClose={handleCancelTravel}
+            onConfirm={handleConfirmTravel}
+            destination={pendingEvent.location}
+            eventStart={(() => {
+                const tz = household?.timezone || 'Europe/Paris';
+                const time = pendingEvent.allDay ? '09:00' : pendingEvent.start;
+                return fromZonedTime(`${pendingEvent.date} ${time}:00`, tz).toISOString();
+            })()}
+        />
+    )
+}
         </div >
     );
 }
