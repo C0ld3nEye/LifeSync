@@ -526,7 +526,7 @@ export default function AgendaPage() {
     const selectedEvents = getDayItems(selectedDate).sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime());
 
     return (
-        <div className="bg-slate-50 dark:bg-slate-950 min-h-screen pb-24 transition-colors duration-300">
+        <div className="bg-slate-50 dark:bg-slate-950 min-h-screen pb-6 transition-colors duration-300">
             {!household && !loading && (
                 <div className="bg-red-500 text-white p-2 text-center text-sm font-bold">
                     ⚠️ Aucun foyer d&eacute;tect&eacute;. Retournez &agrave; l&apos;accueil pour configurer.
@@ -590,9 +590,9 @@ export default function AgendaPage() {
                 </div>
             </header>
 
-            {/* Filters - Always Visible */}
-            <div className="px-4 pt-2 -mb-2 overflow-x-auto no-scrollbar">
-                <div className="flex gap-2 min-w-max pb-2">
+            {/* Filters - Always Visible - Grid/Wrap optimized */}
+            <div className="px-4 pt-2 -mb-2">
+                <div className="flex flex-wrap gap-1.5 justify-center pb-2">
                     {[
                         { id: 'events', label: 'Agenda', active: showEvents, setter: setShowEvents, color: 'text-blue-500', icon: Eye, iconOff: EyeOff },
                         { id: 'general', label: 'Tâches', active: showGeneral, setter: setShowGeneral, color: 'text-purple-500', icon: Sparkles, iconOff: Sparkles },
@@ -604,7 +604,7 @@ export default function AgendaPage() {
                             key={filter.id}
                             onClick={() => filter.setter(!filter.active)}
                             className={cn(
-                                "px-3 py-1.5 rounded-xl transition-all flex items-center gap-2 border",
+                                "px-2 py-1 rounded-xl transition-all flex items-center gap-1.5 border",
                                 filter.active
                                     ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm"
                                     : "bg-slate-50 dark:bg-slate-900/40 border-transparent text-slate-400 opacity-60"
