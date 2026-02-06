@@ -181,90 +181,9 @@ export async function generateRecipe(ctx: GenerationContext) {
     return extractJson(json.candidates[0].content.parts[0].text);
 }
 
-export interface ChallengeContext {
-    targetMember: { uid: string; role: string; age?: number; successes: number; isLastInRanking?: boolean };
-    familyContext: { role: string; age?: number }[]; // To know who is in the house
-    recentChallenges: string[];
-    isCollective: boolean; // If true, the same prompt might be sent for others but with individual twist
-}
+// [DEPRECATED] generateDailyChallenge moved to src/lib/server/challenges.ts
+// Interfaces removed.
 
-export async function generateDailyChallenge(ctx: ChallengeContext) {
-    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-    if (!apiKey) throw new Error("API Key missing");
-
-    const prompt = `Agis comme un Coach de Bien-être et de Vie Familiale très créatif, pratique et un peu taquin.
-    CIBLE: ${ctx.targetMember.role}${ctx.targetMember.age ? ` (${ctx.targetMember.age} ans)` : ''}.
-    SA PERFORMANCE RÉCENTE: ${ctx.targetMember.successes} défis réussis d'affilée.
-    MEMBRES DU FOYER (CONTEXTE): ${ctx.familyContext.map(m => m.role).join(', ')}.
-    
-    OBJECTIF: Proposer LE défi personnel pour CETTE PERSONNE aujourd'hui.
-    ${ctx.isCollective ? "REMARQUE: C'est un jour PARTICULIER (Collectif/Social). Le défi sera synchronisé pour tous. Propose quelque chose de fédérateur (Coop ou Compétitif)." : "Jour normal. Tu es libre de proposer un défi Solo, ou un petit Prank (Blague) si tu es d'humeur taquine."}
-    
-    VARIÉTÉ (SES 10 DERNIERS DÉFIS - Format: [Difficulté] [Points] [Catégorie] Titre): 
-    ${ctx.recentChallenges.join('\n    ') || "Aucun"}
-    
-    RÈGLES ANTI-RÉPÉTITION (CRITIQUE):
-    1. **ANALYSE L'HISTORIQUE** : Si tu vois qu'un défi à points (>0pts) a été donné récemment (dans les 3 derniers jours), N'EN DONNE PAS AUJOURD'HUI.
-    2. **STYLE** : Varie les styles. Si les derniers sont tous "Action Physique", fais du "Social" ou "Mental".
-    3. **TITRE** : Interdiction formelle de proposer un titre déjà présent dans la liste ci-dessus.
-    
-    NOUVELLES RÈGLES D'OR (IMPORTANT):
-    1. **CONCRET ET TANGIBLE** : 
-       - INTERDIT : "Penser à...", "Visualiser...", "Méditer sur...", "Spiritualité". 
-       - OBLIGATOIRE : Actions physiques ou réelles (ex: "Ranger un tiroir", "Boire 50cl d'eau maintenant", "Faire un dessin moche et l'afficher", "Faire une blague", "Faire 10 squats").
-    
-    2. **DIVERSIFICATION DES TYPES** :
-       - Ne fais PAS que du SPORT ! C'est lassant.
-       - Propose aussi : Organisation (Rangement minute), Hygiène (Fil dentaire, Créaner le visage), Social (Appel, Message), Ludique (Prank, Blague).
-       - **PRANKS (BLAGUES)** : Les pranks sont encouragés n'importe quel jour ! (ex: "Change le fond d'écran de qqn", "Cache un objet"). Les cibles doivent être des personnes du foyer. C'est fun !
-
-    3. **DIFFICULTÉ ADAPTATIVE** : 
-       - Si Streak faible (< 3) : Défi FACILE et Rapide (< 2 min).
-       - Si Streak moyen (3-10) : Défi MODÉRÉ.
-       - Si Streak élevé (> 10) : Défi DIFFICILE ou EXPERT.
-       - **EXCEPTION PRIORITAIRE** : Si 'isLastInRanking' (Dernier du classement) est VRAI, la difficulté DOIT être **EXPERT**, même si le streak est à 0.
-
-    4. **DÉFIS SPÉCIAUX (CATCH-UP)** : 
-       - ${ctx.targetMember.isLastInRanking ? "ALERTE: Cette personne est DERNIÈRE du classement. Tu DOIS générer un défi de difficulté 'expert' qui rapporte des points (entre 20 et 40 en fonction de la difficultée)." : "Pas de points bonus pour cette personne."}
-       - **RÈGLE ABSOLUE** : Les points (pointsReward > 0) ne sont attribués **QU'AUX** défis de difficulté **'expert'**. Aucun autre.
-    
-    CONSIGNES GÉNÉRALES:
-    - Langue: Français.
-    - Ton: Motivant, Energetique, parfois Drôle et Taquin.
-    - Ne PAS suggérer de recette.
-    - **INTERDICTION** de mentionner l'âge, le rôle ("Profil", "Membre") ou des données techniques.
-    - S'adresser directement à l'utilisateur (**"Tu"**).
-    
-    FORMAT JSON ATTENDU:
-    {
-        "title": "Nom court et punchy",
-        "description": "Action précise et CONCRÈTE à faire.",
-        "target": "Bénéfice escompté",
-        "category": "hydration" | "activity" | "mental" | "nutrition" | "social" | "household" | "fun",
-        "difficulty": "easy" | "medium" | "hard" | "expert",
-        "type": "solo" | "coop" | "competitive" | "prank",
-        "pointsReward": 0,
-        "isSpecial": false
-    }
-    `;
-
-    const res = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json" }
-        })
-    });
-
-    if (!res.ok) {
-        const errText = await res.text();
-        console.error("Gemini API Error Challenge:", errText);
-        throw new Error("Gemini API Error Challenge: " + errText);
-    }
-    const json = await res.json();
-    return JSON.parse(json.candidates[0].content.parts[0].text);
-}
 
 export interface WeekContext {
     startDate: string; // YYYY-MM-DD

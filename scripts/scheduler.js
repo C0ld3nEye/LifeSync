@@ -157,103 +157,10 @@ async function notifyEvent(householdId, event, timeMsgOrCustomBody, isCustomBody
 
 
 // --- DAILY CHALLENGES AUTOMATION ---
-async function generateGeminiChallenge(targetMember, familyContext, recentChallenges, isCollective) {
-    if (!GEMINI_API_KEY) {
-        console.error("❌ API KEY manquante pour Gemini");
-        return null;
-    }
-
-    const prompt = `Agis comme un Coach de Bien-être et de Vie Familiale très créatif et un peu taquin.
-    CIBLE: ${targetMember.role}${targetMember.age ? ` (${targetMember.age} ans)` : ''}.
-    SA PERFORMANCE RÉCENTE: ${targetMember.successes} défis réussis d'affilée.
-    MEMBRES DU FOYER (CONTEXTE): ${familyContext.map(m => m.role).join(', ')}.
-    
-    OBJECTIF: Proposer LE défi santé/bien-être personnel pour CETTE PERSONNE aujourd'hui.
-    ${isCollective ? "REMARQUE: C'est un jour PARTICULIER (Collectif/Social). Le défi doit impliquer d'autres membres ou être fait en commun (ex: 'Coop', 'Prank', 'Competitive')." : "Jour normal (Focus personnel)."}
-    
-    VARIÉTÉ (SES DÉFIS RÉCENTS): ${recentChallenges.join(', ') || "Aucun"}.
-
-    NOUVELLES RÈGLES D'OR (IMPORTANT):
-    1. **CONCRET ET PHYSIQUE** : Moins de "penser à..." ou "méditer sur...", plus de "faire", "bouger", "toucher". (ex: "Faire 10 pompes", "Boire 1L d'eau avant midi", "Ranger tel espace", "Danser sur une musique").
-    2. **DIFFICULTÉ ADAPTATIVE** : 
-       - Si Streak faible (< 3) : Défi FACILE.
-       - Si Streak moyen (3-10) : Défi MODÉRÉ.
-       - Si Streak élevé (> 10) : Défi DIFFICILE ou EXPERT.
-       - **EXCEPTION PRIORITAIRE** : Si 'isLastInRanking' est VRAI (défini ci-dessous), la difficulté DOIT être **EXPERT**, peu importe le Streak.
-
-    3. **TYPES DE DÉFIS** :
-       - "solo" | "coop" | "competitive" | "prank"
-
-    4. **DÉFIS SPÉCIAUX (CATCH-UP)** : 
-       - ${targetMember.isLastInRanking ? "ALERTE: Cette personne est DERNIÈRE du classement. Tu DOIS générer un défi de difficulté 'expert' qui rapporte des points (30-50 pts)." : "Pas de points bonus pour cette personne."}
-       - **RÈGLE ABSOLUE** : Les points (pointsReward > 0) ne sont attribués **QU'AUX** défis de difficulté **'expert'**. Aucun autre.
-    
-    CONSIGNES GÉNÉRALES:
-    - Langue: Français.
-    - Ton: Motivant, Energetique, parfois Drôle.
-    - Ne PAS suggérer de recette spécifique (géré ailleurs).
-    - **INTERDICTION** de mentionner l'âge, le rôle ("Profil", "Membre") ou des données techniques dans le texte.
-    - S'adresser directement à l'utilisateur (**"Tu"**). Ne jamais dire "Profil de X ans".
-    
-    FORMAT JSON ATTENDU:
-    {
-        "title": "Nom court et punchy",
-        "description": "Action précise et CONCRÈTE à faire.",
-        "target": "Bénéfice escompté",
-        "category": "hydration" | "activity" | "mental" | "nutrition" | "social",
-        "difficulty": "easy" | "medium" | "hard" | "expert",
-        "type": "solo" | "coop" | "competitive" | "prank",
-        "pointsReward": 0,
-        "isSpecial": false
-    }
-    `;
-
-    try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-        const body = JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json" }
-        });
-
-        return new Promise((resolve, reject) => {
-            const req = https.request(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-            }, (res) => {
-                let data = '';
-                res.on('data', chunk => data += chunk);
-                res.on('end', () => {
-                    if (res.statusCode !== 200) {
-                        console.error(`Gemini Error ${res.statusCode}: ${data}`);
-                        resolve(null);
-                        return;
-                    }
-                    try {
-                        const json = JSON.parse(data);
-                        const text = json.candidates[0].content.parts[0].text;
-                        // Extract JSON if wrapped in markdown
-                        const start = text.indexOf('{');
-                        const end = text.lastIndexOf('}');
-                        if (start !== -1 && end !== -1) {
-                            resolve(JSON.parse(text.substring(start, end + 1)));
-                        } else {
-                            resolve(JSON.parse(text));
-                        }
-                    } catch (e) {
-                        console.error("Gemini Parse Error:", e);
-                        resolve(null);
-                    }
-                });
-            });
-            req.on('error', reject);
-            req.write(body);
-            req.end();
-        });
-    } catch (e) {
-        console.error("Generate Exec Error:", e);
-        return null;
-    }
-}
+// --- DAILY CHALLENGES AUTOMATION ---
+// Logic moved to src/app/api/cron/daily-challenge/route.ts
+// This function just triggers the API if needed, or we just rely on a single trigger call per household/user.
+// Actually, calling the API orchestrates everything. We just need to call it.
 
 async function checkDailyChallenges() {
     const now = new Date();
@@ -266,118 +173,24 @@ async function checkDailyChallenges() {
 
         const localTimeStr = formatInTimeZone(now, tz, 'HH:mm');
         const [localHour, localMinute] = localTimeStr.split(':').map(Number);
-        const localDateStr = formatInTimeZone(now, tz, 'yyyy-MM-dd');
-        const dayOfWeek = new Date(localDateStr).getDay();
-        // Sync with App: Tue (2), Sat (6) -> 2 days/week ONLY
-        const isCollective = [2, 6].includes(dayOfWeek);
 
-        // 1. GENERATION (Anytime after 06:00 if missing)
-        if (localHour >= 6) {
-            // Check if we need to generate
-            const memberIds = hData.members || [];
-            let sharedCollectiveChallenge = null;
-
-            // PRE-CHECK: If Collective Day, try to find an ALREADY generated challenge for anyone in this household today
-            // This ensures sync even if script restarts or runs partially
-            if (isCollective) {
-                const anyChallengeSnap = await db.collection('households').doc(householdId).collection('dailyChallenges')
-                    .where('generatedAt', '>=', `${localDateStr}T00:00:00`)
-                    .where('generatedAt', '<=', `${localDateStr}T23:59:59`)
-                    .limit(1) // Just need one to copy
-                    .get();
-
-                if (!anyChallengeSnap.empty) {
-                    const existingData = anyChallengeSnap.docs[0].data();
-                    // Sanitize to be sure
-                    sharedCollectiveChallenge = {
-                        title: existingData.title,
-                        description: existingData.description || "",
-                        target: existingData.target || "",
-                        category: existingData.category || "social",
-                        difficulty: existingData.difficulty || "medium", // Default
-                        type: existingData.type || "coop",
-                        pointsReward: 0, // FORCE 0
-                        isSpecial: false
-                    };
-                    console.log(`♻️ Défi collectif existant trouvé ! On va le propager.`);
-                }
-            }
-
-            for (const uid of memberIds) {
-                const challengeId = `${localDateStr}_${uid}`;
-                const challengeRef = db.collection('households').doc(householdId).collection('dailyChallenges').doc(challengeId);
-                const challengeSnap = await challengeRef.get();
-
-                if (!challengeSnap.exists) {
-                    console.log(`⚙️ Rattrapage génération défi pour ${uid} (${tz})...`);
-
-                    const userDoc = await db.collection('users').doc(uid).get();
-                    const userData = userDoc.exists ? userDoc.data() : {};
-
-                    let userAge = userData.age || 30;
-                    if (userData.birthDate) {
-                        const diff = Date.now() - new Date(userData.birthDate).getTime();
-                        userAge = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
-                    }
-
-                    let aiChallenge = null;
-
-                    // A) USE SHARED CHALLENGE IF EXISTS (Collective Days)
-                    if (isCollective && sharedCollectiveChallenge) {
-                        console.log(`🔄 Réutilisation du défi collectif pour ${uid}`);
-                        aiChallenge = { ...sharedCollectiveChallenge }; // Copy
-                    }
-                    // B) GENERATE NEW CHALLENGE
-                    else {
-                        const recentSnap = await db.collection('households').doc(householdId).collection('dailyChallenges')
-                            .where('uid', '==', uid)
-                            .orderBy('generatedAt', 'desc')
-                            .limit(5)
-                            .get();
-                        const recentTitles = recentSnap.docs.map(d => d.data().title);
-
-                        // RANKING CHECK (For Hardcore/Catch-up Challenges)
-                        const scores = hData.monthlyScores || {};
-                        let isLastInRanking = false;
-
-                        if (memberIds.length > 1 && !isCollective) { // No Catch-up on Collective Days? Or yes? Keep it off for collective to avoid desync.
-                            const ranking = memberIds.map(id => ({ id, score: scores[id] || 0 }))
-                                .sort((a, b) => a.score - b.score);
-
-                            // ADDED RULE: Only activate Catch-up mode sometimes (e.g. 15% chance)
-                            if (ranking.length > 0 && ranking[0].id === uid) {
-                                if (Math.random() < 0.15) {
-                                    isLastInRanking = true;
-                                }
-                            }
-                        }
-
-                        aiChallenge = await generateGeminiChallenge(
-                            { role: "Membre", successes: 0, age: userAge, isLastInRanking },
-                            memberIds.map(id => ({ role: "Membre" })),
-                            recentTitles,
-                            isCollective
-                        );
-
-                        // IF COLLECTIVE, SAVE AS SHARED + FORCE 0 POINTS
-                        if (aiChallenge && isCollective) {
-                            aiChallenge.pointsReward = 0; // Force 0 pts for collective
-                            aiChallenge.isSpecial = false; // No hardcore on collective
-                            sharedCollectiveChallenge = aiChallenge;
-                        }
-                    }
-
-                    if (aiChallenge) {
-                        await challengeRef.set({
-                            uid,
-                            ...aiChallenge,
-                            completed: false,
-                            generatedAt: new Date().toISOString(),
-                            notificationSent: false // Init flag
-                        });
-                        console.log(`✅ Défi généré pour ${uid}`);
-                    }
-                }
+        // 1. GENERATION TRIGGER (06:00)
+        // We trigger the API for this household.
+        if (localHour === 6 && localMinute === 0) {
+            console.log(`⚡ Déclenchement génération défis pour ${householdId}...`);
+            // Call Local API
+            // Assuming the script runs on the same machine or can access the app URL.
+            // If running in docker/pm2 on same server, http://localhost:3000 should work.
+            try {
+                const apiRes = await fetch('http://localhost:3000/api/cron/daily-challenge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ householdId })
+                });
+                const apiJson = await apiRes.json();
+                console.log("API Result:", JSON.stringify(apiJson));
+            } catch (e) {
+                console.error("Failed to call Challenge API:", e);
             }
         }
 

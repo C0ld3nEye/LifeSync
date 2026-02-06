@@ -1,14 +1,21 @@
 "use client";
 
 import { useDailyChallenges } from "@/hooks/useDailyChallenges";
-import { Zap, Flame, Check, ChevronRight, Sparkles } from "lucide-react";
+
+import { Zap, Flame, Check, ChevronRight, Sparkles, Dices, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
+import { startOfWeek, isAfter } from "date-fns";
 
 export default function ChallengeWidget() {
-    const { challenge, stats, toggleCompletion, loading } = useDailyChallenges();
+    const { challenge, stats, toggleCompletion, triggerJoker, loading } = useDailyChallenges();
+
+    // Check Joker Availability
+    const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const lastJoker = stats.lastJokerUsedAt ? new Date(stats.lastJokerUsedAt) : null;
+    const isJokerAvailable = !challenge?.completed && (!lastJoker || !isAfter(lastJoker, currentWeekStart));
 
     if (loading) {
         return (
@@ -63,9 +70,35 @@ export default function ChallengeWidget() {
 
                 {challenge ? (
                     <div className="relative z-10">
-                        <p className={cn("text-lg font-black leading-tight mb-4", challenge.completed ? "text-white" : "text-slate-900 dark:text-white")}>
-                            {challenge.title}
-                        </p>
+                        <div className="flex items-start justify-between gap-2 mb-4">
+                            <p className={cn("text-lg font-black leading-tight", challenge.completed ? "text-white" : "text-slate-900 dark:text-white")}>
+                                {challenge.title}
+                            </p>
+
+                            {/* Joker Button */}
+                            {!challenge.completed && (
+                                <button
+                                    onClick={async (e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        if (!isJokerAvailable) return;
+                                        if (confirm("Utiliser votre JOKER de la semaine pour changer de défi ?")) {
+                                            await triggerJoker();
+                                        }
+                                    }}
+                                    disabled={!isJokerAvailable}
+                                    className={cn(
+                                        "p-2 rounded-full transition-all flex-shrink-0",
+                                        isJokerAvailable
+                                            ? "text-purple-500 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/40"
+                                            : "text-slate-300 bg-slate-50 dark:bg-slate-800/50 cursor-not-allowed opacity-50"
+                                    )}
+                                    title={isJokerAvailable ? "Utiliser mon Joker (Changer de défi)" : "Joker déjà utilisé cette semaine"}
+                                >
+                                    <Dices size={18} />
+                                </button>
+                            )}
+                        </div>
 
                         {!challenge.completed && (
                             <button

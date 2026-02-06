@@ -14,3 +14,5 @@ L'application tourne sur une machine virtuelle qui n'est pas hebergée sur mon p
 
 Les notifications d'application passent par telegram, maintenu en veille via scheduler.js
 Tu dois toujours me répondre en français.
+
+C'est une application qui est censée être utilisée sur mobile, fait donc attention à ce que le format soit toujours adapté.

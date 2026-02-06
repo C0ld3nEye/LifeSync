@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { calculateShoppingList } from './shopping';
 import { WeekMenu } from '@/types/smartmeal';
 
-const EMPTY_SLOT = { type: "Midi", mode: "single", attendees: [], isIgnored: false, recipe: null } as const;
+const EMPTY_SLOT: any = { type: "Midi", mode: "single", attendees: [], isIgnored: false, recipe: null };
 
 describe('calculateShoppingList', () => {
     it('should return empty list for empty menu', () => {

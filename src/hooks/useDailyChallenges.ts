@@ -4,8 +4,7 @@ import { db } from "@/lib/firebase";
 import { useHousehold } from "./useHousehold";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { format, subDays, parseISO, isSameDay } from "date-fns";
-import { generateDailyChallenge } from "@/lib/gemini";
-import { sendTelegramMessage } from "@/lib/telegram";
+
 
 export interface DailyChallenge {
     id: string;
@@ -26,6 +25,7 @@ export interface UserChallengeStats {
     currentStreak: number;
     bestStreak: number;
     lastCompletionDate: string | null;
+    lastJokerUsedAt?: string | null; // [NEW] Joker Tracking
 }
 
 export function useDailyChallenges() {
@@ -106,125 +106,38 @@ export function useDailyChallenges() {
         if (targetUid === user.uid) setLoading(true);
 
         try {
-            // Get recent challenges for variety
-            const recentChallengesQuery = query(
-                collection(db, "households", household.id, "dailyChallenges"),
-                where("uid", "==", targetUid),
-                orderBy("generatedAt", "desc"),
-                limit(10)
-            );
-            const recentSnap = await getDocs(recentChallengesQuery);
-            const recentHistory = recentSnap?.docs?.map((d: any) => {
-                const data = d.data();
-                return `[${data.difficulty || 'moyen'}] [${data.pointsReward || 0}pts] [${data.category || 'diverse'}] ${data.title}`;
-            }) || [];
+            // Call Server Action
+            // We import it dynamically or assume it's available via module import
+            const { generateDailyChallengeAction } = await import("@/app/actions/challenges");
+            const result = await generateDailyChallengeAction(household.id, targetUid);
 
-            // Get target member stats
-            const statsRef = doc(db, "households", household.id, "memberMetadata", targetUid, "challengeStats", "main");
-            const statsSnap = await getDoc(statsRef);
-            const targetStats = statsSnap.exists() ? statsSnap.data() as UserChallengeStats : { currentStreak: 0, bestStreak: 0, lastCompletionDate: null };
-
-            // AI Context
-            const familyContext = household.memberProfiles?.map(m => ({
-                role: "Membre",
-                age: m.age || (m.birthDate ? Math.floor((Date.now() - new Date(m.birthDate).getTime()) / 31557600000) : 30)
-            })) || [];
-
-            // Find current user age
-            const currentUserProfile = household.memberProfiles?.find(m => m.uid === targetUid);
-            const userAge = currentUserProfile?.age || (currentUserProfile?.birthDate ? Math.floor((Date.now() - new Date(currentUserProfile.birthDate).getTime()) / 31557600000) : undefined);
-
-            // Sync with Scheduler: Tue (2), Sat (6) -> 2 days/week ONLY
-            const isCollectiveDay = [2, 6].includes(new Date().getDay());
-
-            // RANKING CHECK (For Hardcore/Catch-up Challenges)
-            const scores = household.monthlyScores || {};
-            const memberIds = household.members || [];
-            let isLastInRanking = false;
-
-            if (memberIds.length > 1) { // Only relevant if multiple people
-                const myScore = scores[targetUid] || 0;
-                // Check if anyone has a LOWER score. If NO one has lower score, I am last (or tied last).
-                // Actually simpler: Sort scores.
-                const sorted = memberIds.map(id => ({ id, score: scores[id] || 0 })).sort((a, b) => a.score - b.score);
-                // The first one (index 0) has the LOWEST score.
-                // ADDED RULE: Only activate Catch-up mode sometimes (e.g. 15% chance) to avoid spamming Hardcore challenges every day.
-                if (sorted[0].id === targetUid) {
-                    if (Math.random() < 0.10) { // 5% chance (Rare/Exceptional)
-                        isLastInRanking = true;
-                    }
-                }
-            }
-
-            // 1. CHECK FOR SHARED COLLECTIVE CHALLENGE (Tue/Sat)
-            let aiChallenge: any = null;
-            if (isCollectiveDay) {
-                const sharedId = `${today}_SHARED`;
-                const sharedRef = doc(db, "households", household.id, "dailyChallenges", sharedId);
-                const sharedSnap = await getDoc(sharedRef);
-
-                if (sharedSnap.exists()) {
-                    // Found the Master Challenge
-                    const existing = sharedSnap.data();
-                    aiChallenge = {
-                        title: existing.title,
-                        description: existing.description,
-                        target: existing.target,
-                        category: existing.category,
-                        difficulty: existing.difficulty,
-                        type: existing.type,
-                        pointsReward: 0,
-                        isSpecial: false
-                    };
-                } else {
-                    // I am the first one! Generate and Save Master Key
-                    const generated = await generateDailyChallenge({
-                        targetMember: { uid: targetUid, role: "Membre", successes: targetStats.currentStreak, age: userAge, isLastInRanking },
-                        familyContext,
-                        recentChallenges: recentHistory,
-                        isCollective: true
-                    });
-
-                    // Save as SHARED first
-                    await setDoc(sharedRef, {
-                        ...generated,
-                        uid: "SHARED",
-                        generatedAt: new Date().toISOString()
-                    });
-
-                    aiChallenge = generated;
-                }
-            }
-
-            // 2. IF NO SHARED FOUND, GENERATE NEW
-            if (!aiChallenge) {
-                aiChallenge = await generateDailyChallenge({
-                    targetMember: { uid: targetUid, role: "Membre", successes: targetStats.currentStreak, age: userAge, isLastInRanking },
-                    familyContext,
-                    recentChallenges: recentHistory,
-                    isCollective: isCollectiveDay
-                });
-            }
-
-            const challengeId = `${today}_${targetUid}`;
-            const challengeData = {
-                uid: targetUid,
-                ...aiChallenge,
-                completed: false,
-                generatedAt: new Date().toISOString()
-            };
-
-            await setDoc(doc(db, "households", household.id, "dailyChallenges", challengeId), challengeData);
-
-            // Trigger Notification (Telegram)
-            const telegramChatId = household.memberPreferences?.[targetUid]?.telegramChatId;
-            if (telegramChatId) {
-                await sendTelegramMessage(telegramChatId, `🔥 *Nouveau Défi LifeSync !*\n\n${aiChallenge.title}\n_${aiChallenge.description}_`);
+            if (!result.success) {
+                console.error("Failed to generate challenge via Server Action:", result.error);
             }
         } catch (error) {
             console.error(`Error generating challenge for ${targetUid}:`, error);
         } finally {
             if (targetUid === user.uid) setLoading(false);
+        }
+    };
+
+    const triggerJoker = async () => {
+        if (!household || !user) return;
+        setLoading(true);
+        try {
+            const { useJokerAction } = await import("@/app/actions/challenges");
+            const result = await useJokerAction(household.id, user.uid);
+            if (!result.success) {
+                // Return error to UI? For now just log
+                console.error("Joker failed:", result.error);
+                throw new Error(result.error);
+            }
+            // Add UI Feedback (Confetti reversed? Sound?)
+        } catch (e) {
+            console.error("Joker Error", e);
+            throw e; // Rethrow for UI handling
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -292,5 +205,5 @@ export function useDailyChallenges() {
         }
     };
 
-    return { challenge, history, stats, loading, toggleCompletion };
+    return { challenge, history, stats, loading, toggleCompletion, triggerJoker };
 }
